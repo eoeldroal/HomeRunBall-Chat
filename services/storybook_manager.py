@@ -60,14 +60,14 @@ class StorybookManager:
                 config = json.load(f)
             print(f"[StorybookManager] 설정 파일 로드 완료: {self.config_path}")
             return config
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             error_msg = f"스토리북 설정 파일을 찾을 수 없습니다: {self.config_path}"
             print(f"[ERROR] {error_msg}")
-            raise FileNotFoundError(error_msg)
+            raise FileNotFoundError(error_msg) from e
         except json.JSONDecodeError as e:
-            error_msg = f"JSON 파싱 오류: {e}"
+            error_msg = f"JSON 파싱 오류: {self.config_path} - {str(e)}"
             print(f"[ERROR] {error_msg}")
-            raise json.JSONDecodeError(error_msg, e.doc, e.pos)
+            raise ValueError(error_msg) from e
 
     def get_storybook(self, storybook_id: str) -> dict:
         """

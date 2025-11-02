@@ -91,15 +91,13 @@ async function sendMessage(isInitial = false) {
     // 로딩 메시지 제거
     removeMessage(loadingId);
 
-    // 응답 파싱
-    let replyText, imagePath;
-    if (typeof data.reply === "object" && data.reply !== null) {
-      replyText = data.reply.reply || data.reply;
-      imagePath = data.reply.image || null;
-    } else {
-      replyText = data.reply;
-      imagePath = null;
-    }
+    // 응답 파싱 (간소화)
+    const replyText = (typeof data.reply === "object" && data.reply !== null)
+      ? (data.reply.reply || data.reply)
+      : data.reply;
+    const imagePath = (typeof data.reply === "object" && data.reply !== null)
+      ? (data.reply.image || null)
+      : null;
 
     // 디버그 정보 콘솔 출력
     if (data.debug) {
@@ -737,7 +735,7 @@ function renderStorybookPage(pageIndex) {
   const imageContainer = document.getElementById('storybook-image-container');
   if (imageContainer) {
     if (page.image) {
-      imageContainer.innerHTML = `<img src="${page.image}" alt="스토리 이미지" onerror="this.innerHTML='<p class=\\'no-image-text\\'>이미지 로드 실패</p>'">`;
+      imageContainer.innerHTML = `<img src="${page.image}" alt="스토리 이미지" onerror="this.parentElement.innerHTML='<p class=\\'no-image-text\\'>이미지 로드 실패</p>'">`;
     } else {
       imageContainer.innerHTML = '<p class="no-image-text">이미지 없음</p>';
     }
@@ -911,7 +909,7 @@ async function transitionToChatMode() {
 
   // 페이드 아웃
   layer.classList.add('active');
-  await delay(500);
+  await wait(500);
 
   // 모달 숨기기
   hideStorybookModal();
@@ -920,7 +918,7 @@ async function transitionToChatMode() {
   await fetchGameState();
 
   // 페이드 인
-  await delay(100);
+  await wait(100);
   layer.classList.remove('active');
 
   console.log('[전환] 채팅 모드로 전환 완료');
@@ -935,13 +933,13 @@ async function transitionToStorybookMode(storybookId) {
 
   // 페이드 아웃
   layer.classList.add('active');
-  await delay(500);
+  await wait(500);
 
   // 스토리북 로드
   await loadAndShowStorybook(storybookId);
 
   // 페이드 인
-  await delay(100);
+  await wait(100);
   layer.classList.remove('active');
 
   console.log('[전환] 스토리북 모드로 전환 완료');
@@ -956,7 +954,7 @@ async function transitionToEnding(endingStorybook) {
 
   // 페이드 아웃
   layer.classList.add('active');
-  await delay(500);
+  await wait(500);
 
   // 엔딩 스토리북 설정
   AppState.storybook.current = endingStorybook;
@@ -973,17 +971,18 @@ async function transitionToEnding(endingStorybook) {
   showStorybookModal();
 
   // 페이드 인
-  await delay(100);
+  await wait(100);
   layer.classList.remove('active');
 
   console.log('[전환] 엔딩으로 전환 완료:', endingStorybook.title);
 }
 
 /**
- * 지연 함수 (Promise)
- * @param {number} ms - 밀리초
+ * 비동기 대기 함수
+ * @param {number} ms - 대기 시간 (밀리초)
+ * @returns {Promise} - 지정된 시간 후 resolve되는 Promise
  */
-function delay(ms) {
+function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 

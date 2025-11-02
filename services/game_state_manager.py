@@ -96,17 +96,23 @@ class GameState:
 
     def __post_init__(self):
         """초기화 후 기본값 설정"""
-        # stats가 None이면 새로 생성
+        # stats가 None이거나 PlayerStats 타입이 아니면 새로 생성
         if self.stats is None or not isinstance(self.stats, PlayerStats):
             self.stats = PlayerStats()
 
-        # flags 기본값 설정
-        if not self.flags:
-            self.flags = {
-                'backstory_revealed': False,  # 5월 집 방문 여부
-                'homerun_flag': False,  # 8월 홈런 달성
-                'steal_phobia_overcome': False,  # 도루 공포증 극복
-            }
+        # flags 기본값 설정 (None이거나 비어있을 때만)
+        if self.flags is None:
+            self.flags = {}
+
+        # 필수 플래그 키 초기화 (없으면 추가)
+        default_flags = {
+            'backstory_revealed': False,  # 5월 집 방문 여부
+            'homerun_flag': False,  # 8월 홈런 달성
+            'steal_phobia_overcome': False,  # 도루 공포증 극복
+        }
+        for key, value in default_flags.items():
+            if key not in self.flags:
+                self.flags[key] = value
 
     def to_dict(self) -> dict:
         """딕셔너리로 변환 (저장용)"""
@@ -212,12 +218,13 @@ class GameStateManager:
             try:
                 with open(save_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    state = GameState.from_dict(data)
-                    self._states[session_id] = state
-                    print(f"[GameStateManager] 게임 상태 로드: {session_id} ({state.current_month}월)")
-                    return state
-            except Exception as e:
-                print(f"[GameStateManager] 게임 상태 로드 실패: {e}")
+                state = GameState.from_dict(data)
+                self._states[session_id] = state
+                print(f"[GameStateManager] 게임 상태 로드: {session_id} ({state.current_month}월)")
+                return state
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"[WARNING] 게임 상태 로드 실패 ({type(e).__name__}): {e}")
+                print(f"[WARNING] 새 게임으로 시작합니다")
 
         # 새 게임 상태 생성
         state = GameState(session_id=session_id)
@@ -239,12 +246,9 @@ class GameStateManager:
         state = self._states[session_id]
         save_file = self.save_dir / f"{session_id}.json"
 
-        try:
-            with open(save_file, 'w', encoding='utf-8') as f:
-                json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
-            print(f"[GameStateManager] 게임 상태 저장 완료: {session_id}")
-        except Exception as e:
-            print(f"[GameStateManager] 저장 실패: {e}")
+        with open(save_file, 'w', encoding='utf-8') as f:
+            json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
+        print(f"[GameStateManager] 게임 상태 저장 완료: {session_id}")
 
     def get_stat_summary(self, session_id: str) -> str:
         """
@@ -259,15 +263,15 @@ class GameStateManager:
         state = self.get_or_create(session_id)
         stats = state.stats
 
-        return f"""
-📊 현재 스탯
-━━━━━━━━━━━━━━━━━━
-💖 친밀도: {stats.intimacy}/100
-🧠 멘탈: {stats.mental}/100
-💪 체력: {stats.stamina}/100
-💥 힘: {stats.power}/100
-🏃 주루: {stats.speed}/100
-"""
+        return (
+            "📊 현재 스탯\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"💖 친밀도: {stats.intimacy}/100\n"
+            f"🧠 멘탈: {stats.mental}/100\n"
+            f"💪 체력: {stats.stamina}/100\n"
+            f"💥 힘: {stats.power}/100\n"
+            f"🏃 주루: {stats.speed}/100"
+        )
 
     def get_game_info(self, session_id: str) -> str:
         """
@@ -282,9 +286,7 @@ class GameStateManager:
         state = self.get_or_create(session_id)
         months_left = state.get_months_until_draft()
 
-        return f"""
-📅 현재: {state.current_month}월 | 🎯 드래프트까지: {months_left}개월
-"""
+        return f"📅 현재: {state.current_month}월 | 🎯 드래프트까지: {months_left}개월"
 
     def advance_month(self, session_id: str) -> bool:
         """

@@ -121,9 +121,7 @@ class StatCalculator:
 
         try:
             # 컨텍스트 정보 구성
-            context_info = ""
-            if conversation_context:
-                context_info = f"[대화 맥락]\n{conversation_context}"
+            context_info = f"[대화 맥락]\n{conversation_context}" if conversation_context else ""
 
             response = chain.invoke({
                 "current_month": game_state.current_month,
@@ -141,11 +139,11 @@ class StatCalculator:
             # 0인 값 제거 (깔끔한 출력을 위해)
             stat_changes = {k: v for k, v in stat_changes.items() if v != 0}
 
-            return stat_changes, reason
+            return (stat_changes, reason)
 
-        except Exception as e:
-            print(f"[StatCalculator] 스탯 분석 실패: {e}")
-            return {}, "스탯 분석 실패"
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"[WARNING] 스탯 분석 실패 ({type(e).__name__}): {e}")
+            return ({}, "스탯 분석 실패")
 
     def calculate_training_bonus(
         self,

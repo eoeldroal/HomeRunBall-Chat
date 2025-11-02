@@ -136,10 +136,10 @@ class EventDetector:
             (조건 충족 여부, 이유)
         """
 
-        # 대화 히스토리 요약
+        # 대화 히스토리 요약 (이미 recent_messages로 제한되어 넘어옴)
         conversation_summary = "\n".join([
             f"{msg.type}: {msg.content[:100]}"
-            for msg in recent_messages[-10:]  # 최근 10개만
+            for msg in recent_messages
         ])
 
         prompt = ChatPromptTemplate.from_messages([
@@ -192,14 +192,11 @@ class EventDetector:
             confidence = result.get('confidence', 0.0)
 
             # 확신도가 0.7 이상일 때만 발동
-            if triggered and confidence >= 0.7:
-                return True, reason
+            return (triggered and confidence >= 0.7, reason)
 
-            return False, reason
-
-        except Exception as e:
-            print(f"[EventDetector] 조건 분석 실패: {e}")
-            return False, "분석 실패"
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"[WARNING] 이벤트 조건 분석 실패 ({type(e).__name__}): {e}")
+            return (False, "분석 실패")
 
     def get_hint(
         self,
@@ -289,8 +286,7 @@ class EventDetector:
                 if hints:
                     return f"💡 힌트: {random.choice(hints)}"
 
-            return None
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"[WARNING] 힌트 생성 실패 ({type(e).__name__}): {e}")
 
-        except Exception as e:
-            print(f"[EventDetector] 힌트 생성 실패: {e}")
-            return None
+        return None

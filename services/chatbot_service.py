@@ -157,12 +157,13 @@ class ChatbotService:
         self.config = self._load_config()
         print(f"[ChatbotService] Config 로드 완료: {self.config.get('name', 'Unknown')}")
 
-        # 2. ChatOpenAI (LangChain) 초기화
-        from langchain_openai import ChatOpenAI
+        # 2. OpenAI API 키 확인
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
 
+        # 3. ChatOpenAI (LangChain) 초기화
+        from langchain_openai import ChatOpenAI
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.7,
@@ -171,7 +172,12 @@ class ChatbotService:
         )
         print("[ChatbotService] ChatOpenAI (LangChain) 초기화 완료")
 
-        # 3. ChromaDB 초기화
+        # 4. OpenAI Client 초기화 (임베딩용)
+        from openai import OpenAI
+        self.client = OpenAI(api_key=api_key)
+        print("[ChatbotService] OpenAI Client 초기화 완료")
+
+        # 5. ChromaDB 초기화
         try:
             self.collection = self._init_chromadb()
             print(f"[ChatbotService] ChromaDB 초기화 완료")
@@ -179,7 +185,7 @@ class ChatbotService:
             print(f"[ChatbotService] ChromaDB 초기화 실패 (컬렉션이 없을 수 있음): {e}")
             self.collection = None
 
-        # 4. 세션 히스토리 저장소 초기화 (InMemoryChatMessageHistory)
+        # 6. 세션 히스토리 저장소 초기화 (InMemoryChatMessageHistory)
         from langchain_core.chat_history import InMemoryChatMessageHistory
 
         # 각 사용자(session_id)별로 대화 내역을 저장하는 딕셔너리
@@ -194,18 +200,18 @@ class ChatbotService:
         self.get_session_history = get_session_history
         print("[ChatbotService] 세션 히스토리 저장소 초기화 완료")
 
-        # 5. 게임 상태 관리자 초기화
+        # 7. 게임 상태 관리자 초기화
         from .game_state_manager import GameStateManager
         save_dir = BASE_DIR / "static" / "data" / "game_states"
         self.game_manager = GameStateManager(save_dir)
         print("[ChatbotService] 게임 상태 관리자 초기화 완료")
 
-        # 6. 이벤트 감지기 초기화
+        # 8. 이벤트 감지기 초기화
         from .event_detector import EventDetector
         self.event_detector = EventDetector(self.llm)
         print("[ChatbotService] 이벤트 감지기 초기화 완료")
 
-        # 7. 스탯 계산기 초기화
+        # 9. 스탯 계산기 초기화
         from .stat_calculator import StatCalculator
         self.stat_calculator = StatCalculator(self.llm)
         print("[ChatbotService] 스탯 계산기 초기화 완료")
@@ -230,11 +236,10 @@ class ChatbotService:
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            return config
-        except FileNotFoundError:
-            print(f"[ERROR] 설정 파일을 찾을 수 없습니다: {config_path}")
-            # 기본 설정 반환
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"[WARNING] Config 로드 실패 ({type(e).__name__}): {e}")
+            print(f"[WARNING] 기본 설정을 사용합니다")
             return {
                 "name": "챗봇",
                 "description": "기본 챗봇입니다.",
@@ -242,12 +247,6 @@ class ChatbotService:
                     "base": "당신은 친절한 AI 어시스턴트입니다.",
                     "rules": ["친절하게 대화하세요"]
                 }
-            }
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] JSON 파싱 오류: {e}")
-            return {
-                "name": "챗봇",
-                "system_prompt": {"base": "당신은 친절한 AI 어시스턴트입니다."}
             }
     
     
@@ -314,16 +313,11 @@ class ChatbotService:
         - )
         - return response.data[0].embedding
         """
-        try:
-            response = self.client.embeddings.create(
-                input=[text],
-                model="text-embedding-3-large"
-            )
-            embedding = response.data[0].embedding
-            return embedding
-        except Exception as e:
-            print(f"[ERROR] 임베딩 생성 실패: {e}")
-            raise
+        response = self.client.embeddings.create(
+            input=[text],
+            model="text-embedding-3-large"
+        )
+        return response.data[0].embedding
     
     
     def _search_similar(self, query: str, threshold: float = 0.45, top_k: int = 5):
@@ -382,60 +376,54 @@ class ChatbotService:
         - 유사도 값 확인 (너무 낮으면 threshold 조정)
         - 검색된 문서 내용 확인
         """
-        # ChromaDB 컬렉션이 없으면 None 반환
+        # ChromaDB 컬렉션이 없거나 비어있으면 None 반환
         if self.collection is None:
             print("[RAG] ChromaDB 컬렉션이 없습니다.")
             return (None, None, None)
 
-        # 컬렉션이 비어있으면 None 반환
         if self.collection.count() == 0:
             print("[RAG] ChromaDB 컬렉션이 비어있습니다. 문서를 추가해주세요.")
             return (None, None, None)
 
-        try:
-            # 1. 쿼리 임베딩 생성
-            query_embedding = self._create_embedding(query)
+        # 1. 쿼리 임베딩 생성
+        query_embedding = self._create_embedding(query)
 
-            # 2. ChromaDB 검색
-            results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k,
-                include=["documents", "distances", "metadatas"]
-            )
+        # 2. ChromaDB 검색
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "distances", "metadatas"]
+        )
 
-            # 3. 유사도 계산 및 필터링
-            documents = results['documents'][0]
-            distances = results['distances'][0]
-            metadatas = results['metadatas'][0] if results['metadatas'] else [{}] * len(documents)
+        # 3. 유사도 계산 및 필터링
+        documents = results['documents'][0]
+        distances = results['distances'][0]
+        metadatas = results['metadatas'][0] if results['metadatas'] else [{}] * len(documents)
 
-            # 가장 유사한 문서 찾기
-            best_document = None
-            best_similarity = 0
-            best_metadata = None
+        # 가장 유사한 문서 찾기
+        best_document = None
+        best_similarity = 0
+        best_metadata = None
 
-            for doc, dist, meta in zip(documents, distances, metadatas):
-                # 유사도 계산 (거리 → 유사도 변환)
-                similarity = 1 / (1 + dist)
+        for doc, dist, meta in zip(documents, distances, metadatas):
+            # 유사도 계산 (거리 → 유사도 변환)
+            similarity = 1 / (1 + dist)
 
-                print(f"[RAG] 문서: {doc[:50]}... | 거리: {dist:.4f} | 유사도: {similarity:.4f}")
+            print(f"[RAG] 문서: {doc[:50]}... | 거리: {dist:.4f} | 유사도: {similarity:.4f}")
 
-                # Threshold 이상인 것만 선택
-                if similarity >= threshold and similarity > best_similarity:
-                    best_document = doc
-                    best_similarity = similarity
-                    best_metadata = meta
+            # Threshold 이상인 것만 선택
+            if similarity >= threshold and similarity > best_similarity:
+                best_document = doc
+                best_similarity = similarity
+                best_metadata = meta
 
-            # 4. 결과 반환
-            if best_document:
-                print(f"[RAG] ✓ 유사 문서 발견 (유사도: {best_similarity:.4f})")
-                print(f"[RAG] 문서 내용: {best_document[:100]}...")
-                return (best_document, best_similarity, best_metadata)
-            else:
-                print(f"[RAG] ✗ Threshold({threshold}) 이상인 문서가 없습니다.")
-                return (None, None, None)
-
-        except Exception as e:
-            print(f"[ERROR] RAG 검색 실패: {e}")
+        # 4. 결과 반환
+        if best_document:
+            print(f"[RAG] ✓ 유사 문서 발견 (유사도: {best_similarity:.4f})")
+            print(f"[RAG] 문서 내용: {best_document[:100]}...")
+            return (best_document, best_similarity, best_metadata)
+        else:
+            print(f"[RAG] ✗ Threshold({threshold}) 이상인 문서가 없습니다.")
             return (None, None, None)
     
     
