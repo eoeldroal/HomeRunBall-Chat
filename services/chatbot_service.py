@@ -157,13 +157,19 @@ class ChatbotService:
         self.config = self._load_config()
         print(f"[ChatbotService] Config 로드 완료: {self.config.get('name', 'Unknown')}")
 
-        # 2. OpenAI Client 초기화
-        from openai import OpenAI
+        # 2. ChatOpenAI (LangChain) 초기화
+        from langchain_openai import ChatOpenAI
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
-        self.client = OpenAI(api_key=api_key)
-        print("[ChatbotService] OpenAI Client 초기화 완료")
+
+        self.llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.7,
+            max_tokens=500,
+            api_key=api_key
+        )
+        print("[ChatbotService] ChatOpenAI (LangChain) 초기화 완료")
 
         # 3. ChromaDB 초기화
         try:
@@ -173,20 +179,20 @@ class ChatbotService:
             print(f"[ChatbotService] ChromaDB 초기화 실패 (컬렉션이 없을 수 있음): {e}")
             self.collection = None
 
-        # 4. LangChain Memory 초기화 (선택)
-        try:
-            from langchain.memory import ConversationBufferMemory
-            from langchain_openai import ChatOpenAI
+        # 4. 세션 히스토리 저장소 초기화 (InMemoryChatMessageHistory)
+        from langchain_core.chat_history import InMemoryChatMessageHistory
 
-            # 메모리 초기화 (간단한 버퍼 메모리 사용)
-            self.memory = ConversationBufferMemory(
-                return_messages=True,
-                memory_key="chat_history"
-            )
-            print("[ChatbotService] LangChain Memory 초기화 완료")
-        except Exception as e:
-            print(f"[ChatbotService] LangChain Memory 초기화 실패 (선택 사항): {e}")
-            self.memory = None
+        # 각 사용자(session_id)별로 대화 내역을 저장하는 딕셔너리
+        self.store = {}
+
+        # 세션 히스토리 가져오기 함수
+        def get_session_history(session_id: str) -> InMemoryChatMessageHistory:
+            if session_id not in self.store:
+                self.store[session_id] = InMemoryChatMessageHistory()
+            return self.store[session_id]
+
+        self.get_session_history = get_session_history
+        print("[ChatbotService] 세션 히스토리 저장소 초기화 완료")
 
         print("[ChatbotService] 초기화 완료")
     
@@ -417,197 +423,105 @@ class ChatbotService:
             return (None, None, None)
     
     
-    def _build_prompt(self, user_message: str, context: str = None, username: str = "사용자"):
+    def _build_prompt(self, context: str = None):
         """
-        LLM 프롬프트 구성
+        LangChain ChatPromptTemplate 구성
 
         Args:
-            user_message (str): 사용자 메시지
             context (str): RAG 검색 결과 (선택)
-            username (str): 사용자 이름
 
         Returns:
-            str: 최종 프롬프트
+            ChatPromptTemplate: LangChain 프롬프트 템플릿
 
-        TODO:
-        1. 시스템 프롬프트 가져오기 (config에서)
-        2. RAG 컨텍스트 포함 여부 결정
-        3. 대화 기록 포함 (선택)
-        4. 최종 프롬프트 문자열 반환
-
-        프롬프트 예시:
-        ```
-        당신은 서강대학교 선배 김서강입니다.
-        신입생들에게 학교 생활을 알려주는 역할을 합니다.
-
-        [참고 정보]  ← RAG 컨텍스트가 있을 때만
-        학식은 곤자가가 맛있어. 돈까스가 인기야.
-
-        사용자: 학식 추천해줘
-        ```
+        설명:
+        - SystemMessage: 시스템 프롬프트 + RAG 컨텍스트
+        - MessagesPlaceholder: 대화 히스토리 자동 삽입 (RunnableWithMessageHistory가 처리)
+        - HumanMessage: 사용자 입력
         """
-        # 1. 시스템 프롬프트 가져오기
-        system_prompt = self.config.get('system_prompt', {})
-        base_prompt = system_prompt.get('base', '당신은 친절한 AI 어시스턴트입니다.')
-        rules = system_prompt.get('rules', [])
+        from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-        # 시스템 프롬프트 구성
-        prompt_parts = [base_prompt]
+        # 1. 시스템 프롬프트 가져오기
+        system_prompt_config = self.config.get('system_prompt', {})
+        base_prompt = system_prompt_config.get('base', '당신은 친절한 AI 어시스턴트입니다.')
+        rules = system_prompt_config.get('rules', [])
+
+        # 시스템 메시지 구성
+        system_parts = [base_prompt]
 
         # 규칙이 있으면 추가
         if rules:
-            prompt_parts.append("\n[대화 규칙]")
+            system_parts.append("\n[대화 규칙]")
             for rule in rules:
-                prompt_parts.append(f"- {rule}")
+                system_parts.append(f"- {rule}")
 
         # 2. RAG 컨텍스트 포함
         if context:
-            prompt_parts.append(f"\n[참고 정보]\n{context}")
+            system_parts.append(f"\n[참고 정보]\n{context}")
 
-        # 3. 대화 기록 포함 (선택)
-        if self.memory:
-            try:
-                chat_history = self.memory.load_memory_variables({})
-                if chat_history and 'chat_history' in chat_history:
-                    history = chat_history['chat_history']
-                    if history:
-                        prompt_parts.append("\n[최근 대화]")
-                        # 최근 3개 메시지만 포함
-                        recent_messages = history[-6:] if len(history) > 6 else history
-                        for msg in recent_messages:
-                            role = "사용자" if msg.type == "human" else "챗봇"
-                            prompt_parts.append(f"{role}: {msg.content}")
-            except Exception as e:
-                print(f"[WARN] 대화 기록 로드 실패: {e}")
+        system_message = "\n".join(system_parts)
 
-        # 4. 사용자 메시지 추가
-        prompt_parts.append(f"\n{username}: {user_message}")
+        # 3. ChatPromptTemplate 생성
+        # - ("system", ...): 시스템 메시지
+        # - MessagesPlaceholder("history"): 대화 히스토리가 여기에 삽입됨
+        # - ("human", "{input}"): 사용자 입력
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_message),
+            MessagesPlaceholder(variable_name="history"),
+            ("human", "{input}")
+        ])
 
-        # 최종 프롬프트 반환
-        final_prompt = "\n".join(prompt_parts)
-        return final_prompt
+        return prompt
     
     
     def generate_response(self, user_message: str, username: str = "사용자") -> dict:
         """
-        사용자 메시지에 대한 챗봇 응답 생성
-        
+        사용자 메시지에 대한 챗봇 응답 생성 (LangChain LCEL 기반)
+
         Args:
             user_message (str): 사용자 입력
-            username (str): 사용자 이름
-        
+            username (str): 사용자 이름 (session_id로도 사용됨)
+
         Returns:
             dict: {
                 'reply': str,       # 챗봇 응답 텍스트
                 'image': str|None   # 이미지 경로 (선택)
             }
-        
-        
-        TODO: 전체 응답 생성 파이프라인 구현
-        
-        
+
+
         ═══════════════════════════════════════════════════
-        📋 구현 단계
-        ═══════════════════════════════════════════════════
-        
-        [1단계] 초기 메시지 처리
-        
-            if user_message.strip().lower() == "init":
-                # 첫 인사말 반환
-                bot_name = self.config.get('name', '챗봇')
-                return {
-                    'reply': f"안녕! 나는 {bot_name}이야.",
-                    'image': None
-                }
-        
-        
-        [2단계] RAG 검색 수행
-        
-            context, similarity, metadata = self._search_similar(
-                query=user_message,
-                threshold=0.45,
-                top_k=5
-            )
-            
-            has_context = (context is not None)
-        
-        
-        [3단계] 프롬프트 구성
-        
-            prompt = self._build_prompt(
-                user_message=user_message,
-                context=context,
-                username=username
-            )
-        
-        
-        [4단계] LLM API 호출
-        
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # 또는 gpt-4
-                messages=[
-                    {"role": "system", "content": "시스템 프롬프트"},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500
-            )
-            
-            reply = response.choices[0].message.content
-        
-        
-        [5단계] 메모리 저장 (선택)
-        
-            if self.memory:
-                self.memory.save_context(
-                    {"input": user_message},
-                    {"output": reply}
-                )
-        
-        
-        [6단계] 응답 반환
-        
-            return {
-                'reply': reply,
-                'image': None  # 이미지 검색 로직 추가 가능
-            }
-        
-        
-        ═══════════════════════════════════════════════════
-        💡 핵심 포인트
-        ═══════════════════════════════════════════════════
-        
-        1. RAG 활용
-           - 검색 결과가 있으면 프롬프트에 포함
-           - 없으면 일반 대화 모드
-        
-        2. 에러 처리
-           - try-except로 API 오류 처리
-           - 실패 시 기본 응답 반환
-        
-        3. 로깅
-           - 각 단계마다 print()로 상태 출력
-           - 디버깅에 매우 유용!
-        
-        4. 확장성
-           - 이미지 검색 로직 추가 가능
-           - 감정 분석 추가 가능
-           - 다중 언어 지원 가능
-        
-        
-        ═══════════════════════════════════════════════════
-        🐛 디버깅 예시
+        📋 LangChain LCEL 파이프라인
         ═══════════════════════════════════════════════════
 
-        print(f"\n{'='*50}")
-        print(f"[USER] {username}: {user_message}")
-        print(f"[RAG] Context found: {has_context}")
-        if has_context:
-            print(f"[RAG] Similarity: {similarity:.4f}")
-            print(f"[RAG] Context: {context[:100]}...")
-        print(f"[LLM] Calling API...")
-        print(f"[BOT] {reply}")
-        print(f"{'='*50}\n")
+        [1단계] 초기 메시지 처리
+            - "init" 메시지는 인사말 반환
+
+        [2단계] RAG 검색 수행
+            - ChromaDB에서 유사 문서 검색
+            - 컨텍스트가 있으면 프롬프트에 포함
+
+        [3단계] ChatPromptTemplate 구성
+            - SystemMessage + RAG 컨텍스트
+            - MessagesPlaceholder (대화 히스토리)
+            - HumanMessage (사용자 입력)
+
+        [4단계] LCEL 체인 구성 및 실행
+            - prompt | self.llm (파이프 연산자)
+            - RunnableWithMessageHistory로 래핑
+            - session_id=username으로 대화 컨텍스트 관리
+
+        [5단계] 응답 반환
+            - AIMessage에서 텍스트 추출
+            - 자동으로 메모리에 저장됨 (RunnableWithMessageHistory가 처리)
+
+
+        ═══════════════════════════════════════════════════
+        💡 핵심 변경사항
+        ═══════════════════════════════════════════════════
+
+        1. OpenAI API 직접 호출 → LangChain ChatOpenAI 사용
+        2. 수동 메모리 관리 → RunnableWithMessageHistory 자동 관리
+        3. 문자열 프롬프트 → ChatPromptTemplate 사용
+        4. 명령형 → 선언형 (LCEL)
         """
 
         print(f"\n{'='*50}")
@@ -634,13 +548,6 @@ class ChatbotService:
 
             has_context = (context is not None)
 
-            # [3단계] 프롬프트 구성
-            prompt = self._build_prompt(
-                user_message=user_message,
-                context=context,
-                username=username
-            )
-
             # 디버깅 출력
             if has_context:
                 print(f"[RAG] ✓ Context found (유사도: {similarity:.4f})")
@@ -648,40 +555,40 @@ class ChatbotService:
             else:
                 print(f"[RAG] ✗ No context found (일반 대화 모드)")
 
-            # [4단계] LLM API 호출
-            print(f"[LLM] Calling OpenAI API...")
+            # [3단계] ChatPromptTemplate 구성
+            prompt = self._build_prompt(context=context)
 
-            # 시스템 프롬프트 추출
-            system_prompt_config = self.config.get('system_prompt', {})
-            system_message = system_prompt_config.get('base', '당신은 친절한 AI 어시스턴트입니다.')
+            # [4단계] LCEL 체인 구성 및 실행
+            print(f"[LLM] Building LangChain LCEL pipeline...")
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500
+            # LCEL: prompt | llm (파이프 연산자로 체인 구성)
+            chain = prompt | self.llm
+
+            # RunnableWithMessageHistory로 래핑 (대화 히스토리 자동 관리)
+            from langchain_core.runnables.history import RunnableWithMessageHistory
+
+            chain_with_history = RunnableWithMessageHistory(
+                chain,
+                self.get_session_history,
+                input_messages_key="input",
+                history_messages_key="history"
             )
 
-            reply = response.choices[0].message.content
+            # 체인 실행 (session_id로 username 사용)
+            print(f"[LLM] Invoking chain with session_id='{username}'...")
+            response = chain_with_history.invoke(
+                {"input": user_message},
+                config={"configurable": {"session_id": username}}
+            )
+
+            # AIMessage에서 텍스트 추출
+            reply = response.content
 
             print(f"[LLM] ✓ Response generated")
             print(f"[BOT] {reply[:100]}...")
+            print(f"[MEMORY] ✓ Conversation automatically saved to session '{username}'")
 
-            # [5단계] 메모리 저장 (선택)
-            if self.memory:
-                try:
-                    self.memory.save_context(
-                        {"input": user_message},
-                        {"output": reply}
-                    )
-                    print(f"[MEMORY] ✓ Conversation saved")
-                except Exception as e:
-                    print(f"[WARN] 메모리 저장 실패: {e}")
-
-            # [6단계] 응답 반환
+            # [5단계] 응답 반환
             print(f"{'='*50}\n")
             return {
                 'reply': reply,

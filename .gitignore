@@ -47,3 +47,6 @@ env/
 
 # repomix code base
 repomix-output.xml
+
+#추가 - 이미지 관련 파일. 용량 문제로 인해
+*.png
