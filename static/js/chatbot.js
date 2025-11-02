@@ -770,6 +770,7 @@ function updateStorybookNavigation() {
   const totalPages = AppState.storybook.current.pages.length;
   const isFirstPage = AppState.storybook.currentPage === 0;
   const isLastPage = AppState.storybook.currentPage === totalPages - 1;
+  const completionAction = AppState.storybook.current.completion_action;
 
   // 이전 버튼 (첫 페이지에서는 비활성화)
   if (prevBtn) {
@@ -782,8 +783,22 @@ function updateStorybookNavigation() {
     // "다음" 버튼 숨기기
     if (nextBtn) nextBtn.style.display = 'none';
 
-    // "대화 시작하기" 버튼 표시
-    if (startBtn) startBtn.style.display = 'inline-block';
+    // "대화 시작하기" 또는 "게임 종료" 버튼 표시
+    if (startBtn) {
+      startBtn.style.display = 'inline-block';
+
+      // 게임 종료 액션이면 버튼 텍스트 변경
+      if (completionAction === 'game_end') {
+        startBtn.textContent = '게임 종료';
+        startBtn.onclick = () => {
+          hideStorybookModal();
+          alert('플레이해주셔서 감사합니다! 새로운 게임을 시작하려면 페이지를 새로고침하세요.');
+        };
+      } else {
+        startBtn.textContent = '대화 시작하기';
+        startBtn.onclick = storybookStart;
+      }
+    }
   } else {
     // 중간 페이지일 때
     if (nextBtn) nextBtn.style.display = 'inline-block';
@@ -863,19 +878,19 @@ async function completeStorybook() {
 
       } else if (data.next_action === 'game_end') {
         // 게임 종료 (엔딩 표시)
-        hideStorybookModal();
-
-        if (data.ending) {
-          // 엔딩 스토리북 표시
-          AppState.storybook.current = {
-            id: '9_ending',
-            title: data.ending.title,
-            pages: data.ending.pages
+        if (data.ending && data.ending.pages && data.ending.pages.length > 0) {
+          // 엔딩 스토리북으로 전환
+          const endingStorybook = {
+            id: data.ending.id || 'ending',
+            title: data.ending.title || '엔딩',
+            pages: data.ending.pages,
+            completion_action: 'game_end'
           };
-          AppState.storybook.currentPage = 0;
-          showStorybookModal();
-          renderStorybookPage(0);
+
+          await transitionToEnding(endingStorybook);
         } else {
+          // 엔딩 데이터가 없으면 간단한 메시지
+          hideStorybookModal();
           alert('게임이 종료되었습니다. 플레이해주셔서 감사합니다!');
         }
       }
@@ -930,6 +945,38 @@ async function transitionToStorybookMode(storybookId) {
   layer.classList.remove('active');
 
   console.log('[전환] 스토리북 모드로 전환 완료');
+}
+
+/**
+ * 엔딩 스토리북으로 전환
+ * @param {object} endingStorybook - 엔딩 스토리북 데이터
+ */
+async function transitionToEnding(endingStorybook) {
+  const layer = document.getElementById('transition-layer');
+
+  // 페이드 아웃
+  layer.classList.add('active');
+  await delay(500);
+
+  // 엔딩 스토리북 설정
+  AppState.storybook.current = endingStorybook;
+  AppState.storybook.currentPage = 0;
+  AppState.storybook.isActive = true;
+
+  // 타이틀 업데이트
+  document.getElementById('storybook-title').textContent = endingStorybook.title;
+
+  // 첫 페이지 렌더링
+  renderStorybookPage(0);
+
+  // 모달 표시
+  showStorybookModal();
+
+  // 페이드 인
+  await delay(100);
+  layer.classList.remove('active');
+
+  console.log('[전환] 엔딩으로 전환 완료:', endingStorybook.title);
 }
 
 /**
