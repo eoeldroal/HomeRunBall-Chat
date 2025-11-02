@@ -205,6 +205,11 @@ class ChatbotService:
         self.event_detector = EventDetector(self.llm)
         print("[ChatbotService] 이벤트 감지기 초기화 완료")
 
+        # 7. 스탯 계산기 초기화
+        from .stat_calculator import StatCalculator
+        self.stat_calculator = StatCalculator(self.llm)
+        print("[ChatbotService] 스탯 계산기 초기화 완료")
+
         print("[ChatbotService] 초기화 완료")
     
     
@@ -646,12 +651,32 @@ class ChatbotService:
             print(f"[BOT] {reply[:100]}...")
             print(f"[MEMORY] ✓ Conversation automatically saved to session '{username}'")
 
-            # [5단계] 게임 상태 저장
+            # [5단계] 스탯 변화 계산 및 적용
+            game_state = self.game_manager.get_or_create(username)
+
+            # 이전 스탯 저장 (변화량 계산용)
+            old_stats = game_state.stats.to_dict()
+
+            # LLM으로 스탯 변화 분석
+            stat_changes, stat_reason = self.stat_calculator.analyze_conversation(
+                user_message=user_message,
+                bot_reply=reply,
+                game_state=game_state
+            )
+
+            # 스탯 변화 적용
+            if stat_changes:
+                game_state.stats.apply_changes(stat_changes)
+                print(f"[STAT] ✓ Stat changes applied: {stat_changes}")
+                print(f"[STAT] Reason: {stat_reason}")
+            else:
+                print(f"[STAT] No stat changes")
+
+            # [6단계] 게임 상태 저장
             self.game_manager.save(username)
             print(f"[GAME] ✓ Game state saved for '{username}'")
 
-            # [6단계] 이벤트 감지 및 힌트 제공
-            game_state = self.game_manager.get_or_create(username)
+            # [7단계] 이벤트 감지 및 힌트 제공
             conversation_history = self.get_session_history(username).messages
 
             # 이벤트 체크
@@ -675,11 +700,13 @@ class ChatbotService:
             if hint:
                 print(f"[HINT] ✓ Hint provided: {hint}")
 
-            # [7단계] 응답 반환
+            # [8단계] 응답 반환 (디버그 정보 포함)
             print(f"{'='*50}\n")
+
+            # 기본 응답
             response_dict = {
                 'reply': reply,
-                'image': None  # 이미지 검색 로직은 추후 추가 가능
+                'image': None
             }
 
             # 이벤트 정보 추가 (있을 경우)
@@ -689,6 +716,30 @@ class ChatbotService:
             # 힌트 추가 (있을 경우)
             if hint:
                 response_dict['hint'] = hint
+
+            # 디버그 정보 추가 (개발 모드)
+            response_dict['debug'] = {
+                'game_state': {
+                    'current_month': game_state.current_month,
+                    'current_day': game_state.current_day,
+                    'stats': game_state.stats.to_dict(),
+                    'intimacy_level': self.stat_calculator.get_intimacy_level(game_state.stats.intimacy),
+                    'months_until_draft': game_state.get_months_until_draft(),
+                },
+                'stat_changes': {
+                    'changes': stat_changes,
+                    'reason': stat_reason,
+                    'old_stats': old_stats,
+                    'new_stats': game_state.stats.to_dict()
+                },
+                'event_check': {
+                    'triggered': event_info is not None,
+                    'event_name': event_info['event_name'] if event_info else None
+                },
+                'hint_provided': hint is not None,
+                'conversation_count': len(conversation_history),
+                'event_history': game_state.event_history
+            }
 
             return response_dict
 
