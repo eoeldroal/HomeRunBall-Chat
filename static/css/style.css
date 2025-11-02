@@ -314,3 +314,19 @@ button:hover {
   background: white;
   color: #667eea;
 }
+
+/* 알림 슬라이드 아웃 애니메이션 */
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.slide-out {
+  animation: slideOutRight 0.3s forwards;
+}

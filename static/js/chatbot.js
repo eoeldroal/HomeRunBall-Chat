@@ -37,8 +37,6 @@ const username = chatArea ? chatArea.dataset.username : "사용자";
 const chatLog = document.getElementById("chat-log");
 const userMessageInput = document.getElementById("user-message");
 const sendBtn = document.getElementById("send-btn");
-const videoBtn = document.getElementById("videoBtn");
-const imageBtn = document.getElementById("imageBtn");
 
 // ============================================================================
 // 오류 처리 유틸리티
@@ -215,7 +213,7 @@ if (sendBtn) {
   sendBtn.addEventListener("click", () => sendMessage());
 }
 
-// 모달 열기/닫기
+// 통합 모달 관리 함수
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
@@ -230,15 +228,6 @@ function closeModal(modalId) {
   }
 }
 
-// 미디어 버튼 이벤트
-if (videoBtn) {
-  videoBtn.addEventListener("click", () => openModal("videoModal"));
-}
-
-if (imageBtn) {
-  imageBtn.addEventListener("click", () => openModal("imageModal"));
-}
-
 // 모달 닫기 버튼
 document.querySelectorAll(".modal-close").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -247,8 +236,8 @@ document.querySelectorAll(".modal-close").forEach((btn) => {
   });
 });
 
-// 모달 배경 클릭 시 닫기
-document.querySelectorAll(".modal").forEach((modal) => {
+// 모달 배경 클릭 시 닫기 (모든 모달 타입 통합)
+document.querySelectorAll(".modal, .detail-modal").forEach((modal) => {
   modal.addEventListener("click", (event) => {
     if (event.target === modal) {
       modal.style.display = "none";
@@ -370,28 +359,12 @@ function removeNotification(event, notifId) {
   event.stopPropagation(); // 헤더 클릭 이벤트 방지
   const notification = document.getElementById(notifId);
   if (notification) {
-    notification.style.animation = "slideOutRight 0.3s";
+    notification.classList.add("slide-out");
     setTimeout(() => {
       notification.remove();
     }, 300);
   }
 }
-
-// slideOutRight 애니메이션 추가 (CSS에 정의되어야 하지만 JavaScript로 처리)
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes slideOutRight {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-`;
-document.head.appendChild(style);
 
 // ============================================================================
 // 게임 API 함수들
@@ -428,17 +401,18 @@ async function fetchHints() {
 
   if (data.success) {
     const hintsList = document.getElementById("hints-list");
-    hintsList.innerHTML = data.hints
-      .map(
-        (hint) =>
-          `<li class="hint-item" onclick="useHint('${hint.replace(
-            /'/g,
-            "\\'"
-          )}')">${hint}</li>`
-      )
-      .join("");
+    hintsList.innerHTML = "";
 
-    openDetailModal("hintsModal");
+    data.hints.forEach((hint) => {
+      const li = document.createElement("li");
+      li.className = "hint-item";
+      li.textContent = hint;
+      li.dataset.hint = hint;
+      li.addEventListener("click", () => useHint(hint));
+      hintsList.appendChild(li);
+    });
+
+    openModal("hintsModal");
   }
 }
 
@@ -448,7 +422,7 @@ function useHint(hint) {
     userMessageInput.value = hint;
     userMessageInput.focus();
   }
-  closeDetailModal("hintsModal");
+  closeModal("hintsModal");
 }
 
 // 특별한 순간 조회
@@ -483,22 +457,7 @@ async function fetchMoments() {
       `;
     }
 
-    openDetailModal("momentsModal");
-  }
-}
-
-// 모달 열기/닫기
-function openDetailModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.style.display = "block";
-  }
-}
-
-function closeDetailModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.style.display = "none";
+    openModal("momentsModal");
   }
 }
 
@@ -523,15 +482,6 @@ const btnMoments = document.getElementById("btn-moments");
 if (btnMoments) {
   btnMoments.addEventListener("click", fetchMoments);
 }
-
-// 모달 배경 클릭 시 닫기
-document.querySelectorAll(".detail-modal").forEach((modal) => {
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none";
-    }
-  });
-});
 
 // ============================================================================
 // 온보딩 스토리북 기능
