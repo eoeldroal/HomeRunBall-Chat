@@ -85,6 +85,8 @@ class GameState:
 
     # 훈련 스케줄 (추후 구현)
     training_schedule: Dict[str, str] = field(default_factory=dict)
+    # Training history for prompt context
+    training_history: List[dict] = field(default_factory=list)
 
     # 스토리북 관련
     current_phase: str = "storybook"  # "storybook" | "chat"
@@ -119,6 +121,9 @@ class GameState:
             if key not in self.flags:
                 self.flags[key] = value
 
+        if self.training_history is None:
+            self.training_history = []
+
     def to_dict(self) -> dict:
         """딕셔너리로 변환 (저장용)"""
         return {
@@ -130,6 +135,7 @@ class GameState:
             'event_history': self.event_history,
             'special_moments': self.special_moments,
             'training_schedule': self.training_schedule,
+            'training_history': self.training_history,
             'current_phase': self.current_phase,
             'current_storybook_id': self.current_storybook_id,
             'storybook_completed': self.storybook_completed,
@@ -185,10 +191,73 @@ class GameState:
             if change != 0:
                 changes[key] = change
 
+
         return changes
+
+    def record_training_session(
+        self,
+        *,
+        month: int,
+        intensity: int,
+        intensity_label: str,
+        focuses: List[str],
+        stat_changes: Dict[str, int],
+        stamina_change: int,
+        summary: str,
+    ):
+        """Store training outcome in the training history."""
+        entry = {
+            'month': month,
+            'intensity': intensity,
+            'intensity_label': intensity_label,
+            'focuses': focuses,
+            'stat_changes': stat_changes,
+            'stamina_change': stamina_change,
+            'summary': summary,
+        }
+
+        self.training_history.append(entry)
+
+        # Keep the history small (latest 10 entries are enough for prompts)
+        if len(self.training_history) > 10:
+            self.training_history = self.training_history[-10:]
+
+    def get_recent_training_summary(self, limit: int = 3) -> str:
+        """Return a short summary of recent training sessions."""
+        if not self.training_history:
+            return ""
+
+        recent_entries = self.training_history[-limit:]
+
+        focus_map = {
+            'batting': 'Batting',
+            'speed': 'Speed',
+            'defense': 'Defense',
+        }
+
+        lines = []
+        for entry in reversed(recent_entries):
+            focus_labels = [focus_map.get(f, f) for f in entry.get('focuses', [])]
+            focus_text = ', '.join(focus_labels) if focus_labels else 'General'
+            stat_changes = entry.get('stat_changes', {})
+            change_parts = [
+                f"{focus_map.get(stat, stat)} {value:+d}"
+                for stat, value in stat_changes.items()
+            ]
+            stamina_delta = entry.get('stamina_change', 0)
+            if stamina_delta:
+                change_parts.append(f"Stamina {stamina_delta:+d}")
+
+            change_text = ', '.join(change_parts) if change_parts else 'No change'
+            lines.append(
+                f"- Month {entry.get('month')} {entry.get('intensity_label')} training ({focus_text}) -> {change_text}"
+            )
+
+        return '\n'.join(lines)
 
 
 class GameStateManager:
+
     """
     게임 상태 저장/로드 관리
 

@@ -5,5 +5,6 @@ Services 패키지
 """
 
 from .chatbot_service import get_chatbot_service
+from .training_manager import get_training_manager
 
-__all__ = ['get_chatbot_service']
+__all__ = ['get_chatbot_service', 'get_training_manager']

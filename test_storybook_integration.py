@@ -104,6 +104,7 @@ def test_game_state_extension():
         assert hasattr(game_state, 'current_storybook_id'), "current_storybook_id 필드 없음"
         assert hasattr(game_state, 'storybook_completed'), "storybook_completed 필드 없음"
         assert hasattr(game_state, 'previous_month_stats'), "previous_month_stats 필드 없음"
+        assert hasattr(game_state, 'training_history'), "training_history 필드 없음"
 
         print(f"✓ 새 필드 확인 완료")
         print(f"  - current_phase: {game_state.current_phase}")
@@ -114,6 +115,7 @@ def test_game_state_extension():
         assert hasattr(game_state, 'set_chat_mode'), "set_chat_mode 메서드 없음"
         assert hasattr(game_state, 'set_storybook_mode'), "set_storybook_mode 메서드 없음"
         assert hasattr(game_state, 'save_previous_month_stats'), "save_previous_month_stats 메서드 없음"
+        assert hasattr(game_state, 'record_training_session'), "record_training_session 메서드 없음"
 
         print("✓ 새 메서드 확인 완료")
 

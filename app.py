@@ -298,8 +298,57 @@ def api_advance_month():
 
         old_month = game_state.current_month
 
-        # 다음 스토리북 ID 가져오기 (현재 월 기준)
-        next_storybook_id = storybook_manager.get_next_storybook_id(game_state)
+        # ========== 8월 경기 계산 로직 ==========
+        # 8월에서 9월로 넘어갈 때 경기 결과가 아직 계산되지 않았으면 자동 계산
+        if old_month == 8 and game_state.flags.get('tournament_result') == 'strikeout':
+            print("[8월 이벤트] 경기 결과 계산 시작")
+
+            # 1. 채팅 히스토리에서 최근 10개 메시지 추출
+            conversation_history = chatbot.get_session_history(username).messages
+            recent_messages = conversation_history[-10:] if len(conversation_history) >= 10 else conversation_history
+
+            # 2. 사용자 메시지만 필터링
+            user_messages = [
+                msg.content
+                for msg in recent_messages
+                if hasattr(msg, 'type') and msg.type == 'human'
+            ]
+
+            # 3. 조언 문자열 생성 (없으면 기본값)
+            if user_messages:
+                advice = "\n".join(user_messages)
+                print(f"[8월 이벤트] 추출된 조언 ({len(user_messages)}개 메시지):\n{advice[:100]}...")
+            else:
+                advice = "..."
+                print("[8월 이벤트] 채팅 없음, 기본 조언 사용")
+
+            # 4. 경기 결과 계산
+            from services.game_event_manager import get_game_event_manager
+            event_manager = get_game_event_manager()
+            result, details = event_manager.calculate_at_bat_result(advice, game_state.stats.stamina)
+
+            # 5. 결과에 따라 스토리북 ID 설정
+            if result == "homerun":
+                game_state.flags['tournament_result'] = 'homerun'
+                next_storybook_id = "8_result_homerun"
+                print(f"[8월 이벤트] 결과: 홈런 → {next_storybook_id}")
+            elif result == "hit":
+                game_state.flags['tournament_result'] = 'hit'  # 도루는 나중에 결정
+                game_state.next_action = "decide_steal"
+                next_storybook_id = "8_result_hit"
+                print(f"[8월 이벤트] 결과: 안타 → {next_storybook_id} (도루 분기 대기)")
+            else:  # strikeout
+                game_state.flags['tournament_result'] = 'strikeout'
+                next_storybook_id = "8_result_strikeout"
+                print(f"[8월 이벤트] 결과: 삼진 → {next_storybook_id}")
+
+            print(f"[8월 이벤트] 계산 상세: {details}")
+
+            # 월은 증가시키지 않음 (결과 스토리북 → 도루 분기 → 8_to_9_transition → 9월)
+        else:
+            # 일반 월 진행 (기존 로직)
+            next_storybook_id = storybook_manager.get_next_storybook_id(game_state)
+        # ========== 8월 경기 계산 로직 끝 ==========
 
         if not next_storybook_id:
             return jsonify({
@@ -307,8 +356,9 @@ def api_advance_month():
                 'error': '다음 단계를 결정할 수 없습니다'
             }), 400
 
-        # 월 증가 (9월 이하일 때만)
-        if game_state.current_month < 9:
+        # 월 증가 (9월 이하일 때만, 단 8월 경기 계산인 경우는 제외)
+        august_tournament_calculated = old_month == 8 and game_state.flags.get('tournament_result') != 'strikeout'
+        if game_state.current_month < 9 and not august_tournament_calculated:
             game_state.current_month += 1
 
         new_month = game_state.current_month
