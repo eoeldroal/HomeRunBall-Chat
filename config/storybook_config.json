@@ -9,23 +9,23 @@
       "pages": [
         {
           "text": "2025년 3월, 따스한 봄바람이 야구장을 스쳐 지나간다.\n\n당신은 오늘 서강고등학교 야구부에 새로운 코치로 부임했다. 드래프트를 6개월 앞둔 고3 선수, 서강태를 맡게 된 것이다.\n\n그런데 강태의 표정이 심상치 않다...",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         },
         {
           "text": "\"...새 코치님이라고요?\"\n\n강태가 당신을 차갑게 바라본다. 경계하는 눈빛이 역력하다.\n\n\"어차피 또 금방 그만두실 거면서...\"\n\n그의 목소리에는 배신감이 묻어있다. 전 코치가 갑자기 그만뒀다는 소문을 들은 것 같다.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         },
         {
           "text": "\"전 코치님도 처음엔 그렇게 말했어요. '끝까지 책임지겠다'고.\"\n\n강태가 고개를 돌린다.\n\n\"근데 결국... 저 혼자 남았죠.\"\n\n그의 등이 외로워 보인다. 버림받는 것에 익숙해진 듯한 모습이 마음 아프다.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         },
         {
           "text": "\"9월 드래프트까지 딱 6개월 남았어요.\"\n\n강태가 다시 당신을 돌아본다. 이번엔 조금 다른 눈빛이다.\n\n\"...믿어도 될까요, 코치님?\"\n\n떨리는 목소리. 그는 여전히 희망을 품고 있다. 다만 너무 많이 다쳐서 쉽게 마음을 열지 못할 뿐이다.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         },
         {
           "text": "이것이 당신과 서강태의 첫 만남이다.\n\n앞으로 6개월. 그와 함께 땀 흘리고, 좌절하고, 성장하며 프로야구 드래프트를 준비해야 한다.\n\n가장 중요한 것은 그의 신뢰를 얻는 것. 진심 어린 대화로 서서히 마음의 문을 열어야 한다.\n\n자, 이제 강태와 이야기를 시작해보자.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         }
       ],
       "completion_action": "start_chat_mode"
@@ -37,15 +37,15 @@
       "pages": [
         {
           "text": "3월의 마지막 날.\n\n강태가 훈련을 마치고 당신에게 다가온다. 처음 만났을 때와는 다른 표정이다.\n\n\"코치님...\"\n\n그의 목소리에는 여전히 조심스러움이 남아있지만, 처음보다는 훨씬 부드러워졌다.",
-          "image": null
+          "image":"./static/images/chatbot/3_month.png"
         },
         {
           "text": "\"...생각보다는 괜찮네요. 코치님.\"\n\n강태가 작게 웃는다. 처음 보는 그의 미소다.\n\n\"전 코치님들과는... 좀 다른 것 같아요.\"\n\n조금씩, 아주 조금씩 마음의 벽이 낮아지고 있다. 신뢰라는 것이 이렇게 천천히 쌓이는 것이다.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         },
         {
           "text": "이제 4월이다.\n\n날씨가 더 따뜻해지고, 본격적인 시즌이 시작된다.\n\n강태와 함께 더 많은 시간을 보내며, 그의 기량을 끌어올려야 한다.\n\n드래프트까지 이제 5개월. 시간이 빠르게 흘러간다.",
-          "image": null
+          "image": "./static/images/chatbot/3_month.png"
         }
       ],
       "completion_action": "show_next_storybook",
@@ -58,19 +58,19 @@
       "pages": [
         {
           "text": "4월의 따뜻한 햇살 아래, 훈련장이 활기를 띤다.\n\n드래프트까지 5개월. 이제 본격적으로 강태의 기량을 끌어올려야 할 때다.\n\n\"오늘부터 기초 훈련을 다시 시작할 거야.\"\n\n당신의 말에 강태가 미간을 찌푸린다.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         },
         {
           "text": "\"코치님, 기초 훈련은 좀... 저 이미 다 알아요.\"\n\n강태가 불만스러워한다. 드래프트를 앞두고 고급 기술을 연마하고 싶은 마음이 이해된다.\n\n\"빨리 실전 연습을 하고 싶은데...\"\n\n하지만 당신은 그의 폼을 관찰하며 확신했다. 기초가 탄탄하지 않으면 나중에 더 큰 문제가 된다는 것을.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         },
         {
           "text": "\"하...알겠어요. 코치님 말대로 해볼게요.\"\n\n강태가 결국 고개를 끄덕인다. 당신에 대한 신뢰가 조금씩 쌓이고 있다.\n\n\"근데 정말 효과 있는 거죠?\"\n\n그의 눈빛에는 기대와 불안이 공존한다.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         },
         {
           "text": "4월, 기초부터 다시 시작한다.\n\n때론 지루하고, 때론 답답할 것이다. 하지만 탄탄한 기초는 결국 빛을 발한다.\n\n강태와의 대화를 통해 그를 격려하고, 때론 엄격하게 지도하라.\n\n드래프트까지의 여정은 이제 시작일 뿐이다.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         }
       ],
       "completion_action": "start_chat_mode"
@@ -82,15 +82,15 @@
       "pages": [
         {
           "text": "4월이 지나간다.\n\n기초 훈련을 통해 강태의 기본기가 확실히 탄탄해졌다.\n\n처음엔 불만스러워했지만, 이제는 그 이유를 알게 된 듯하다.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         },
         {
           "text": "\"코치님... 감사해요.\"\n\n훈련 후 강태가 말한다.\n\n\"처음엔 왜 기초만 하냐고 짜증 났는데, 이제 알 것 같아요. 확실히 폼이 안정됐어요.\"\n\n그의 눈빛에 신뢰가 자리잡고 있다.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         },
         {
           "text": "5월, 드래프트까지 4개월.\n\n이제 본격적으로 실전 기술을 연마할 시간이다.\n\n강태와 함께 더 높은 목표를 향해 나아가자.",
-          "image": null
+          "image": "./static/images/chatbot/4_month.png"
         }
       ],
       "completion_action": "show_next_storybook",
@@ -124,7 +124,7 @@
         },
         {
           "text": "그때, 현관문이 열리며 훈련복 차림의 강태가 들어왔다. 당신과 어머니를 번갈아 보던 그의 얼굴이 굳어졌다.\n\n\"? 코치님이 왜 여기에... 어디까지 들으신 거죠.\"",
-          "image": null
+          "image": "./static/images/chatbot/5_month.png"
         }
       ],
       "completion_action": "start_chat_mode"
@@ -155,11 +155,11 @@
       "pages": [
         {
           "text": "6월, 드래프트까지 절반을 남겨두고.\n\n이제 강태의 약점을 보완하고 강점을 극대화할 시간이다.\n\n모든 스탯을 균형있게 끌어올려야 한다.",
-          "image": null
+          "image": "./static/images/chatbot/6_month.png"
         },
         {
           "text": "\"코치님과 함께라면 뭐든 할 수 있을 것 같아요.\"\n\n강태가 웃으며 말한다. 이제 그는 당신을 완전히 신뢰한다.\n\n남은 시간, 더욱 집중해서 그를 최고로 만들자.",
-          "image": null
+          "image": "./static/images/chatbot/6_month.png"
         }
       ],
       "completion_action": "start_chat_mode"
@@ -171,7 +171,7 @@
       "pages": [
         {
           "text": "6월이 지나간다.\n\n드래프트까지 3개월. 시간이 정말 빠르게 흘러간다.\n\n강태는 이제 완전히 달라진 선수가 되었다.",
-          "image": null
+          "image": "./static/images/chatbot/6_month.png"
         }
       ],
       "completion_action": "show_next_storybook",
@@ -184,11 +184,11 @@
       "pages": [
         {
           "text": "7월, 무더운 여름.\n\n드래프트까지 2개월 남았다. 이제 마지막 스퍼트를 올릴 시간이다.\n\n체력과 멘탈 관리가 무엇보다 중요하다.",
-          "image": null
+          "image": "./static/images/chatbot/7_month.png"
         },
         {
           "text": "\"코치님, 이제 정말 가까워졌네요. 드래프트가...\"\n\n강태의 목소리에 긴장감이 묻어난다.\n\n이제 마지막까지 함께 달려야 한다.",
-          "image": null
+          "image": "./static/images/chatbot/7_month.png"
         }
       ],
       "completion_action": "start_chat_mode"
@@ -200,7 +200,7 @@
       "pages": [
         {
           "text": "7월이 끝난다.\n\n드래프트가 한 달 앞으로 다가왔다.\n\n강태와 함께한 시간들이 주마등처럼 스쳐 지나간다.",
-          "image": null
+          "image": "./static/images/chatbot/7_month.png"
         }
       ],
       "completion_action": "show_next_storybook",
@@ -214,7 +214,7 @@
       "pages": [
         {
           "text": "8월, 대통령배 전국고교야구대회 결승.\n\n팽팽한 접전 끝에 9회 말, 2사 만루 상황. 스코어는 3:4로 뒤지고 있다.\n\n그리고 다음 타석은 서강태. 하지만 이전 타석까지 계속 삼진만 당해 표정이 어둡다.",
-          "image": null
+          "image": "./static/images/chatbot/ballpark.png"
         },
         {
           "text": "강태가 더그아웃에 앉아 배트를 쥔 채 고개를 숙이고 있다. 그의 눈빛이 흔들리고 있다.\n\n팀의 운명이, 그리고 강태의 미래가 다음 타석에 달려있다.\n\n이제, 타석에 오르기 전인 그에게 다가가 조언을 해주자.",
@@ -231,7 +231,7 @@
       "pages": [
         {
           "text": "당신의 조언을 들은 강태의 눈빛이 달라졌다. 그는 결심한 듯 심호흡을 하고 타석에 들어섰다.\n\n쨍!! 하는 금속음과 함께, 공은 밤하늘을 가르며 날아갔다.\n\n\"넘어갔습니다! 서강태! 끝내기 만루 홈런! 기적 같은 역전승입니다!\"",
-          "image": null
+          "image": "./static/images/chatbot/cheers1.png"
         }
       ],
       "stat_changes": { "mental": 20, "batting": 5, "intimacy": 10 },
@@ -244,11 +244,11 @@
       "pages": [
         {
           "text": "당신의 조언을 되새긴 강태가 집중력을 끌어올렸다.\n\n날카로운 타구음과 함께 공은 2루수 옆을 꿰뚫는 안타가 되었다! 주자 두 명이 홈으로 들어오며 극적인 동점. 팀은 패배의 위기에서 벗어났다.",
-          "image": null
+          "image": "./static/images/chatbot/cheers2.png"
         },
         {
           "text": "그 순간, 3루 코치에게서 도루 사인이 나왔다.\n\n강태의 눈빛이 흔들린다. 과거의 트라우마가 그의 발목을 붙잡는 듯하다...",
-          "image": null
+          "image": "./static/images/chatbot/ballpark.png"
         }
       ],
       "stat_changes": { "mental": 10, "batting": 3, "intimacy": 5 },
@@ -261,7 +261,7 @@
       "pages": [
         {
           "text": "당신의 조언에도 불구하고, 강태의 어깨는 무거워보였다.\n\n결국 그의 방망이는 허공을 갈랐고, 마지막 아웃카운트가 올라갔다.\n\n강태는 고개를 숙인 채 더그아웃으로 들어왔다. 그의 뒷모습에서 깊은 아쉬움이 느껴졌다.",
-          "image": null
+          "image": "./static/images/chatbot/ballpark.png"
         }
       ],
       "stat_changes": { "mental": -20, "intimacy": -5 },
@@ -274,7 +274,7 @@
       "pages": [
         {
           "text": "해설: \"세이프! 서강태의 도루 성공입니다! 이 선수, 주루까지 완벽합니다!\"\n\n당신은 주먹을 불끈 쥐었다. 강태가 스스로의 트라우마를 이겨낸 순간이었다.",
-          "image": null
+          "image": "./static/images/chatbot/cheers2.png"
         }
       ],
       "stat_changes": { "speed": 10, "mental": 15 },
@@ -287,7 +287,7 @@
       "pages": [
         {
           "text": "강태는 망설였다. 뛰어야 한다는 것을 알면서도, 과거의 기억이 그의 발을 묶었다.\n\n결국 그는 스타트조차 끊지 못했다. 경기는 그대로 무승부로 끝났다.\n\n아쉬움이 남는 결과지만, 아직 그에게는 시간이 필요할지도 모른다.",
-          "image": null
+          "image": "./static/images/chatbot/ballpark.png"
         }
       ],
       "stat_changes": { "mental": -10 },
@@ -300,11 +300,11 @@
       "pages": [
         {
           "text": "8월이 끝나간다.\n\n이제 정말 드래프트가 눈앞이다.\n\n강태와 함께한 6개월의 여정이 이제 결실을 맺을 시간이다.",
-          "image": null
+          "image": "./static/images/chatbot/ballpark.png"
         },
         {
           "text": "\"코치님, 정말 감사했어요. 이 6개월... 제 인생에서 가장 소중한 시간이었어요.\"\n\n강태가 진심 어린 눈빛으로 말한다.\n\n\"이제 드래프트에서 최선을 다할게요. 코치님을 위해서라도!\"\n\n9월, 운명의 달이 시작된다.",
-          "image": null
+          "image": "./static/images/chatbot/8_month.png"
         }
       ],
       "completion_action": "show_next_storybook",
