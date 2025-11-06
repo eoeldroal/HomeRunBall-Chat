@@ -34,6 +34,13 @@ const AppState = {
     isSubmitting: false,
     intensity: 60,
     focuses: ['batting']
+  },
+
+  // 초기화 상태
+  initialization: {
+    status: 'pending',      // 'pending' | 'loading' | 'ready' | 'error'
+    storybookChecked: false,
+    gameStateLoaded: false
   }
 };
 
@@ -294,6 +301,41 @@ function showError(userMessage, error = null) {
     console.error(error);
   }
   appendMessageSync("bot", `❌ ${userMessage}`);
+}
+
+// ============================================================================
+// 입력 필드 상태 관리
+// ============================================================================
+
+/**
+ * 채팅 입력 필드 비활성화
+ * @param {string} reason - 비활성화 이유 (플레이스홀더에 표시)
+ */
+function disableChatInput(reason = "로딩 중...") {
+  if (userMessageInput) {
+    userMessageInput.disabled = true;
+    userMessageInput.placeholder = reason;
+    userMessageInput.classList.add('disabled');
+  }
+  if (sendBtn) {
+    sendBtn.disabled = true;
+  }
+  console.log('[입력] 비활성화:', reason);
+}
+
+/**
+ * 채팅 입력 필드 활성화
+ */
+function enableChatInput() {
+  if (userMessageInput) {
+    userMessageInput.disabled = false;
+    userMessageInput.placeholder = "메시지를 입력하세요...";
+    userMessageInput.classList.remove('disabled');
+  }
+  if (sendBtn) {
+    sendBtn.disabled = false;
+  }
+  console.log('[입력] 활성화');
 }
 
 // 메시지 전송 함수 (EventSource 스트리밍 사용)
@@ -1100,26 +1142,13 @@ async function closeOnboarding() {
     modal.classList.remove('active');
   }
 
-  // 온보딩 종료 후 게임 초기화
-  setTimeout(async () => {
-    // 1. 게임 상태 가져오기 (월 정보 포함)
-    await fetchGameState();
+  console.log('[온보딩] 종료, 앱 초기화 시작');
 
-    // 2. 3월 가이드 메시지 표시
-    show3MonthGuide();
+  // 3월 가이드 표시
+  show3MonthGuide();
 
-    // 3. 스토리북 확인
-    await checkInitialStorybook();
-
-    // 4. 초기 메시지 요청 (스토리북이 없을 때만)
-    // 스토리북이 있으면 스토리북 완료 후 startNewMonth()에서 자동으로 첫 메시지 생성
-    setTimeout(() => {
-      if (chatLog && chatLog.childElementCount === 0 && !AppState.storybook.isProcessing) {
-        console.log("초기 메시지 요청 (스토리북 없음)");
-        sendMessage(true);
-      }
-    }, 500);
-  }, 500); // 모달이 완전히 닫힌 후 처리
+  // 앱 초기화 (async/await로 명확한 순서 보장)
+  await initializeApp();
 }
 
 // 다음 페이지
@@ -1547,6 +1576,9 @@ async function transitionToChatMode(storybookId = null) {
   // 스토리북 UI 숨기기
   hideStorybookInBook();
 
+  // 입력 필드 활성화 (채팅 모드 진입)
+  enableChatInput();
+
   // 월 시작 처리 (채팅 화면 초기화 + 시스템 메시지)
   // storybookId가 null이면 이미 처리되었으므로 생략
   if (storybookId) {
@@ -1665,9 +1697,71 @@ async function checkInitialStorybook() {
 // 페이지 로드
 // ============================================================================
 
+/**
+ * 앱 초기화 함수 (async/await 기반)
+ * - setTimeout 제거, 명확한 순서 보장
+ * - 로딩 오버레이 관리
+ * - 입력 필드 상태 관리
+ */
+async function initializeApp() {
+  const overlay = document.getElementById('init-overlay');
+
+  try {
+    // 초기화 시작
+    AppState.initialization.status = 'loading';
+    console.log('[초기화] 시작');
+
+    // 입력 필드 비활성화
+    disableChatInput('게임을 불러오는 중...');
+
+    // 병렬로 스토리북 확인 및 게임 상태 로드
+    await Promise.all([
+      checkInitialStorybook(),
+      fetchGameState()
+    ]);
+
+    // 초기화 완료
+    AppState.initialization.status = 'ready';
+    console.log('[초기화] 완료');
+
+    // 오버레이 숨기기 (부드러운 전환)
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
+
+    // 채팅 모드인 경우에만 입력 활성화 및 초기 메시지 전송
+    if (!AppState.storybook.isActive) {
+      enableChatInput();
+
+      // 채팅 로그가 비어있으면 초기 메시지 전송
+      if (chatLog && chatLog.childElementCount === 0) {
+        console.log('[초기화] 초기 메시지 전송');
+        sendMessage(true);
+      }
+    }
+    // 스토리북 모드인 경우 입력은 비활성화 상태 유지
+
+  } catch (error) {
+    // 초기화 실패 처리
+    AppState.initialization.status = 'error';
+    console.error('[초기화] 실패:', error);
+
+    if (overlay) {
+      const overlayText = overlay.querySelector('p');
+      if (overlayText) {
+        overlayText.textContent = '오류가 발생했습니다. 새로고침해주세요.';
+      }
+    }
+
+    showError('초기화에 실패했습니다. 페이지를 새로고침해주세요.', error);
+  }
+}
+
 // 페이지 로드 시 초기화
 window.addEventListener("load", async () => {
   console.log("페이지 로드 완료");
+
+  // Training UI 초기화
   initializeTrainingUI();
 
   // 초기 월 설정 (기본값: 3월)
@@ -1676,24 +1770,16 @@ window.addEventListener("load", async () => {
   // 1. 온보딩 체크 및 표시 (최우선)
   const onboardingShown = checkAndShowOnboarding();
 
-  // 2. 온보딩을 표시하지 않은 경우에만 스토리북/채팅 초기화
   if (!onboardingShown) {
-    // 초기 스토리북 확인
-    await checkInitialStorybook();
-
-    // 게임 상태 가져오기 (월 정보 업데이트)
-    await fetchGameState();
-
-    // 초기 메시지 요청 (스토리북이 없을 때만)
-    // 스토리북이 있으면 스토리북 완료 후 startNewMonth()에서 자동으로 첫 메시지 생성
-    setTimeout(() => {
-      if (chatLog && chatLog.childElementCount === 0 && !AppState.storybook.isProcessing) {
-        console.log("초기 메시지 요청 (스토리북 없음)");
-        sendMessage(true);
-      }
-    }, 500);
+    // 2. 온보딩을 표시하지 않은 경우 앱 초기화
+    await initializeApp();
+  } else {
+    // 3. 온보딩이 표시된 경우 오버레이 숨김 (온보딩 종료 시 initializeApp 호출)
+    const overlay = document.getElementById('init-overlay');
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
   }
-  // 온보딩이 표시된 경우, closeOnboarding()에서 3월 가이드와 스토리북 체크를 처리
 });
 
 /**
