@@ -30,7 +30,7 @@ class PlayerStats:
     mental: int = 35       # 멘탈
 
     # 신체 (고교 선수로서의 기본 피지컬)
-    stamina: int = 50      # 체력
+    stamina: int = 100     # 체력 (게임 밸런스를 위해 100으로 상향)
 
     # 기술 (재능은 있으나 아직 미숙한 상태)
     batting: int = 40      # 타격 능력

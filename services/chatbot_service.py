@@ -469,17 +469,31 @@ class ChatbotService:
 [캐릭터 행동 가이드]
 {self._get_behavior_guide(game_state)}
 """
+            # 훈련 시스템이 활성화된 월(4~7월)에만 훈련 가이드 추가
+            TRAINABLE_MONTHS = [4, 5, 6, 7]
             training_summary = game_state.get_recent_training_summary()
-            if training_summary:
+
+            if training_summary and game_state.current_month in TRAINABLE_MONTHS:
                 state_info += f"""
 
 [최근 훈련 기록]
 {training_summary}
 
 [훈련 응답 가이드]
-- 최근 훈련에서 느낀 몸 상태와 감정을 자연스럽게 언급합니다.
-- 강도가 높았다면 회복에 대한 언급도 덧붙입니다.
+- 사용자가 훈련에 대해 물어보면 최근 훈련에서 느낀 몸 상태를 언급합니다.
+- 단, 사용자가 다른 주제를 꺼내면 그 주제에 집중하세요.
 """
+            elif game_state.current_month == 3:
+                # 3월은 아이스브레이킹 단계
+                state_info += """
+
+[3월 특별 가이드]
+- 아직 훈련 시스템이 시작되지 않았습니다.
+- 코치님과 서로를 알아가는 시간입니다.
+- 야구에 대한 열정, 과거 경험, 드래프트에 대한 두려움 등을 자연스럽게 대화하세요.
+- 훈련 계획에 대해 먼저 언급하지 마세요.
+"""
+
             system_parts.append(state_info)
 
         # 3. RAG 검색 결과(context)가 있으면 프롬프트에 추가
