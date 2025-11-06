@@ -239,6 +239,14 @@ async function submitTraining(event) {
 
     const data = await response.json();
 
+    // 경고 처리 (체력 부족, 훈련 횟수 초과 등)
+    if (!data.success && data.warning) {
+      closeTrainingModal();
+      showWarning(data.message);
+      return;
+    }
+
+    // 실제 오류 처리
     if (!response.ok || !data.success) {
       throw new Error(data.error || '훈련 요청이 실패했습니다.');
     }
@@ -311,6 +319,50 @@ function showError(userMessage, error = null) {
     console.error(error);
   }
   appendMessageSync("bot", `❌ ${userMessage}`);
+}
+
+/**
+ * 알림 자동 제거 (공통 함수)
+ * @param {string} notifId - 알림 ID
+ * @param {number} delay - 제거까지 대기 시간 (ms)
+ */
+function autoRemoveNotification(notifId, delay = 7000) {
+  setTimeout(() => {
+    const element = document.getElementById(notifId);
+    if (element) {
+      element.style.opacity = '0';
+      element.style.transform = 'translateY(-20px)';
+      setTimeout(() => element.remove(), 300);
+    }
+  }, delay);
+}
+
+/**
+ * 경고 알림 표시 (7초 후 자동 사라짐)
+ * @param {string} message - 경고 메시지
+ */
+function showWarning(message) {
+  const notifId = `warning-${AppState.counters.notification++}`;
+  const container = document.getElementById("notifications-container");
+  if (!container) {
+    // 컨테이너가 없으면 콘솔에만 출력
+    console.warn('[WARNING]', message);
+    return;
+  }
+
+  const notification = document.createElement("div");
+  notification.className = "notification-item warning";
+  notification.id = notifId;
+  notification.innerHTML = `
+    <div class="notification-title">
+      ⚠️ ${message}
+    </div>
+  `;
+
+  container.appendChild(notification);
+
+  // 7초 후 자동 제거
+  autoRemoveNotification(notifId, 7000);
 }
 
 // ============================================================================
@@ -1019,6 +1071,9 @@ function showEventNotification(eventInfo) {
   `;
 
   container.appendChild(notification);
+
+  // 7초 후 자동 제거
+  autoRemoveNotification(notifId, 7000);
 }
 
 // 힌트 알림 표시 (스탯 패널 아래)
@@ -1043,6 +1098,9 @@ function showHintNotification(hint) {
   `;
 
   container.appendChild(notification);
+
+  // 7초 후 자동 제거
+  autoRemoveNotification(notifId, 7000);
 }
 
 // 힌트 알림 표시 (컨텍스트 포함)
@@ -1068,6 +1126,9 @@ function showHintWithContext(hintInfo) {
   `;
 
   container.appendChild(notification);
+
+  // 7초 후 자동 제거
+  autoRemoveNotification(notifId, 7000);
 }
 
 // 알림 펼치기/접기
