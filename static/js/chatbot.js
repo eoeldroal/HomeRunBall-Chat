@@ -253,12 +253,8 @@ async function submitTraining(event) {
 
     closeTrainingModal();
 
-    const changeText = formatTrainingChanges(data.stat_changes, data.stamina_change);
-    const message = ["<strong>" + data.intensity_label + "</strong>", data.summary];
-    if (changeText) {
-      message.push('변화: ' + changeText);
-    }
-    appendMessageSync('guide', message.join('<br>'));
+    // 훈련 결과를 카드 형식으로 표시
+    showTrainingResultCard(data);
 
     await fetchGameState();
   } catch (error) {
@@ -302,7 +298,148 @@ function initializeTrainingUI() {
     });
   }
 
+  // 훈련 카드 클릭 이벤트 초기화
+  initializeTrainingCards();
+
+  // 강도 마커 클릭 이벤트 추가
+  initializeIntensityMarkers();
+
   refreshTrainingAvailability();
+}
+
+/**
+ * 훈련 카드 클릭 이벤트 초기화
+ */
+function initializeTrainingCards() {
+  const trainingCards = document.querySelectorAll('.training-card');
+
+  trainingCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const checkbox = card.querySelector('input[type="checkbox"]');
+      if (!checkbox) return;
+
+      // 체크박스 상태 토글
+      checkbox.checked = !checkbox.checked;
+
+      // 카드 active 클래스 토글
+      card.classList.toggle('active', checkbox.checked);
+
+      // 최소 1개는 선택되어 있어야 함
+      const allCheckboxes = document.querySelectorAll('.training-card input[type="checkbox"]');
+      const checkedCount = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+
+      if (checkedCount === 0) {
+        // 마지막 하나를 해제하려고 할 때 다시 체크
+        checkbox.checked = true;
+        card.classList.add('active');
+      }
+    });
+  });
+}
+
+/**
+ * 강도 마커 클릭 이벤트 초기화
+ */
+function initializeIntensityMarkers() {
+  const intensityMarkers = document.querySelectorAll('.intensity-marker');
+
+  intensityMarkers.forEach(marker => {
+    marker.addEventListener('click', () => {
+      const value = Number(marker.getAttribute('data-value'));
+      if (trainingIntensityInput && !isNaN(value)) {
+        trainingIntensityInput.value = value;
+        AppState.training.intensity = value;
+        updateTrainingIntensityLabel(value);
+      }
+    });
+  });
+}
+
+/**
+ * 훈련 결과를 카드 형식으로 표시
+ * @param {Object} data - 훈련 결과 데이터
+ */
+function showTrainingResultCard(data) {
+  const chatLog = document.getElementById('chat-log');
+  if (!chatLog) return;
+
+  // 강도 레이블 한글 매핑
+  const intensityLabelsKR = {
+    'Recovery Session': '회복 세션',
+    'Light Training': '가벼운 훈련',
+    'Standard Training': '기본 훈련',
+    'Focused Training': '집중 훈련',
+    'High-Intensity Training': '고강도 훈련'
+  };
+
+  // 아이콘 매핑
+  const intensityIcons = {
+    'Recovery Session': '😌',
+    'Light Training': '🏃',
+    'Standard Training': '💪',
+    'Focused Training': '🔥',
+    'High-Intensity Training': '⚡'
+  };
+
+  const statIcons = {
+    'batting': '🏏',
+    'speed': '🏃',
+    'defense': '⚾'
+  };
+
+  const icon = intensityIcons[data.intensity_label] || '💪';
+  const intensityKR = intensityLabelsKR[data.intensity_label] || data.intensity_label;
+
+  // 스탯 변화 항목 생성
+  const statItems = [];
+
+  if (data.stat_changes && Object.keys(data.stat_changes).length > 0) {
+    Object.entries(data.stat_changes).forEach(([key, value]) => {
+      const label = TRAINING_FOCUS_LABELS[key] || key;
+      const valueClass = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral';
+      const sign = value > 0 ? '+' : '';
+
+      statItems.push(`
+        <div class="training-result-stat-item">
+          <span class="training-result-stat-label">${statIcons[key] || ''} ${label}</span>
+          <span class="training-result-stat-value ${valueClass}">${sign}${value}</span>
+        </div>
+      `);
+    });
+  }
+
+  // 체력 변화 추가
+  if (typeof data.stamina_change === 'number' && data.stamina_change !== 0) {
+    const valueClass = data.stamina_change > 0 ? 'positive' : data.stamina_change < 0 ? 'negative' : 'neutral';
+    const sign = data.stamina_change > 0 ? '+' : '';
+
+    statItems.push(`
+      <div class="training-result-stat-item">
+        <span class="training-result-stat-label">💚 체력</span>
+        <span class="training-result-stat-value ${valueClass}">${sign}${data.stamina_change}</span>
+      </div>
+    `);
+  }
+
+  // 훈련 결과 카드 HTML 생성 (summary 제거, 깔끔한 레이아웃)
+  const resultCard = document.createElement('div');
+  resultCard.className = 'message training-result-card';
+  resultCard.innerHTML = `
+    <div class="training-result-header">
+      <div class="training-result-icon">${icon}</div>
+      <div class="training-result-title">
+        <h3>${intensityKR}</h3>
+      </div>
+    </div>
+    ${statItems.length > 0 ? `
+      <div class="training-result-stats">
+        ${statItems.join('')}
+      </div>
+    ` : '<p style="text-align: center; color: #666; margin: 10px 0;">훈련을 완료했습니다.</p>'}
+  `;
+
+  chatLog.appendChild(resultCard);
+  chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 // ============================================================================
